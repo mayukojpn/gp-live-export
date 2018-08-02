@@ -1,8 +1,7 @@
-# GP Manual Export
+# GP Live Export
 
 ## Requirement
 - GlotPress as WordPress plugin.
-- WP-CLI ([Should be removed in future version](https://github.com/mayukojpn/gp-manual-export/issues/1))
 
 ## Demo
-![demo](https://github.com/mayukojpn/gp-manual-export/raw/readme/gp-manual-export.gif)
+![demo](https://github.com/mayukojpn/gp-live-export/raw/readme/gp-manual-export.gif)
