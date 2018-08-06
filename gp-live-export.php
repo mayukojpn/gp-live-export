@@ -4,6 +4,7 @@ Plugin Name: GP Live Export
 Description: Export translation file from GlotPress to the site language directory by dashboard UI.
 Author:      Mayo Moriyama
 Version:     0.1
+
 */
 
 class GPLE_Options_Page {
@@ -126,6 +127,7 @@ class GPLE_Options_Page {
 				}
 			}
   }
+
 	/**
 	 * Get a translation set for a project.
 	 *
@@ -151,6 +153,7 @@ class GPLE_Options_Page {
 		return fclose( $file );
 
 	}
+
 	/**
 	 * Generate a file path to save a file.
 	 *
@@ -164,6 +167,10 @@ class GPLE_Options_Page {
 		$name = "$name-$locale.$type";
 		return $name;
 	}
+
+	/**
+	 * Settings page display callback.
+	 */
 	function page_rending () {
 		echo '<div class="wrap">'
 				.'<h1 class="wp-heading-inline">';
@@ -215,6 +222,9 @@ class GPLE_Options_Page {
 			echo '</div>';
 	}
 
+	/**
+	 * Generate list of translation project.
+	 */
 	function gp_link_export_project ( $project ) {
 		if ( $translation_sets = GP::$translation_set->by_project_id( $project->id ) ) :
 
@@ -238,6 +248,10 @@ class GPLE_Options_Page {
 		endif;
 
 	}
+
+	/**
+	 * Display notification on Admin screen.
+	 */
 	function admin_notice() {
 		foreach ( $this->message as $message ) {
 			?>
