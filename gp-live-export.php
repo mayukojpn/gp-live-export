@@ -61,14 +61,16 @@ class GPLE_Options_Page {
 	}
 
   /**
-   * Settings page display callback.
+   * Export translation file.
    */
   function export() {
 
-			$project = $_GET["project"];
-			$locale  = $_GET["locale"];
-
-			if ( empty( $project ) || empty( $locale ) ) {
+			if ( isset( $_GET["page"] ) && $_GET["page"] == 'gp-live-export'
+			  && isset( $_GET["project"] ) && isset( $_GET["locale"] ) ) {
+				$project = $_GET["project"];
+				$locale  = $_GET["locale"];
+			}
+			else {
 				return;
 			}
 
