@@ -181,7 +181,10 @@ class GPLE_Options_Page {
 	 * @param string type    File type
 	 * @return $path File path to save
 	 */
-	function get_file_name ( $name = '', $locale = 'ja', $type = 'po' ) {
+	function get_file_name ( $name = '', $locale = '', $type = 'po' ) {
+		if ( empty( $locale ) ) {
+			$locale = get_user_locale();
+		}
 		$name = str_replace( 'wp-', '', $name);
 		$name = "$name-$locale.$type";
 		return $name;
