@@ -17,6 +17,8 @@ class GPLE_Options_Page {
    */
   function __construct() {
 
+		include 'lib/glotpress/locales.php';
+
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
 
@@ -121,7 +123,7 @@ class GPLE_Options_Page {
 
 			else:
 				$print = $format->print_exported_file( $this->project, $this->locale, $translation_set, $entries );
-				$name  = $this->get_file_name( $project, $locale, $type );
+				$name  = $this->get_file_name( $project, GP_Locales::by_slug( $locale )->wp_locale, $type );
 				$path  = path_join( WP_LANG_DIR, $name );
 				$save  = $this->file_save( $print, $path );
 
@@ -281,10 +283,9 @@ class GPLE_Options_Page {
 				$admin_url = ( $project = $project_path           ) ? $admin_url.'&project='.$project : $admin_url;
 				$admin_url = ( $locale = $translation_set->locale ) ? $admin_url.'&locale='.$locale   : $admin_url;
 				$admin_url = ( $set = $translation_set->slug      ) ? $admin_url.'&set='.$set         : $admin_url;
-
 				printf ( '<a href="%1$s" class="button">%2$s</a>',
 				esc_url ( admin_url ( $admin_url ) ),
-				$locale . ' ('.$set.')'
+				GP_Locales::by_slug( $locale )->wp_locale . ' ('.$set.')'
 			 );
 			endforeach;
 
