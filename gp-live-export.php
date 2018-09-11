@@ -1,9 +1,9 @@
 <?php
 /*
 Plugin Name: GP Live Export
-Description: Export translation file from GlotPress to the site language directory by dashboard UI.
+Description: Convert your WordPress site into all-in-one translation platform of editor and sandbox. GlotPress plugin Required.
 Author:      Mayo Moriyama
-Version:     0.1
+Version:     0.2
 
 */
 
@@ -17,15 +17,32 @@ class GPLE_Options_Page {
    */
   function __construct() {
 
-			add_action( 'admin_menu', array( $this, 'admin_menu' ) );
-			add_action( 'init',       array( $this, 'export'     ) );
+		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
+		add_action( 'admin_init', array( $this, 'admin_init' ) );
+		add_action( 'init',       array( $this, 'export'     ) );
 
   }
+
+	function admin_init () {
+		if ( !is_plugin_active( 'glotpress/glotpress.php' ) ) {
+			$this->message[] = array(
+				'status'  => 'error',
+				'content' => esc_html__( 'GlotPress plugin needs to be installed and activated', 'gp-live-export' ),
+				'path'    => 'GP Live Export'
+			);
+			add_action( 'admin_notices', array( $this, 'admin_notice' ) );
+			remove_submenu_page( 'options-general.php', 'gp-live-export' );
+		}
+		else {
+			return false;
+		}
+	}
 
   /**
    * Registers a new settings page under Settings.
    */
   function admin_menu() {
+
       add_options_page(
 					esc_html__( 'GP Live Export', 'gp-live-export' ),
           esc_html__( 'GP Live Export', 'gp-live-export' ),
@@ -66,6 +83,11 @@ class GPLE_Options_Page {
    */
   function export() {
 
+		if ( !is_plugin_active( 'glotpress/glotpress.php' ) ) {
+			return;
+		}
+
+
 			if ( isset( $_GET["page"] ) && $_GET["page"] == 'gp-live-export'
 			  && isset( $_GET["project"] ) && isset( $_GET["locale"] ) ) {
 				$project = $_GET["project"];
@@ -96,7 +118,7 @@ class GPLE_Options_Page {
 				if ( ! $format ) {
 					$this->message[] = array(
 						'status'  => 'error',
-						'content' => __( 'No such format.', 'glotpress' ),
+						'content' => __( 'No such format', 'glotpress' ),
 						'path'    => $project
 					);
 					add_action( 'admin_notices', array( $this, 'admin_notice' ) );
@@ -137,7 +159,7 @@ class GPLE_Options_Page {
 	 */
 	function file_save ( $print = '', $path = '' ) {
 		if ( empty( $print ) || empty( $path ) ) {
-			return new WP_Error( 'gp_live_export_no_param', __( 'No content or file path.', 'gp-live-export' ) );
+			return new WP_Error( 'gp_live_export_no_param', __( 'No content or file path', 'gp-live-export' ) );
 		}
 		$file_path = path_join( WP_LANG_DIR, $path );
 
@@ -261,7 +283,7 @@ class GPLE_Options_Page {
 						case 'error':
 							printf(
 								/* Translators: %1$s: error sentence, %2$s: project name */
-								esc_html__( '%1$s please try again: %2$s', 'gp-live-export' ),
+								'%1$s: %2$s',
 								$message['content'],
 								'<b>' . $message['path'] . '</b>'
 							);
