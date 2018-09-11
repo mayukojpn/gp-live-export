@@ -17,8 +17,6 @@ class GPLE_Options_Page {
    */
   function __construct() {
 
-		include 'lib/glotpress/locales.php';
-
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
 
