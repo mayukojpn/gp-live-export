@@ -3,7 +3,7 @@
 Plugin Name: GP Live Export
 Description: Convert your WordPress site into all-in-one translation platform of editor and sandbox. GlotPress plugin Required.
 Author:      Mayo Moriyama
-Version:     0.2
+Version:     0.3
 
 */
 
@@ -19,24 +19,8 @@ class GPLE_Options_Page {
 
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
-		add_action( 'init',       array( $this, 'export'     ) );
 
   }
-
-	function admin_init () {
-		if ( !is_plugin_active( 'glotpress/glotpress.php' ) ) {
-			$this->message[] = array(
-				'status'  => 'error',
-				'content' => esc_html__( 'GlotPress plugin needs to be installed and activated', 'gp-live-export' ),
-				'path'    => 'GP Live Export'
-			);
-			add_action( 'admin_notices', array( $this, 'admin_notice' ) );
-			remove_submenu_page( 'options-general.php', 'gp-live-export' );
-		}
-		else {
-			return false;
-		}
-	}
 
   /**
    * Registers a new settings page under Settings.
@@ -78,76 +62,89 @@ class GPLE_Options_Page {
 		return $this->translation_set;
 	}
 
+	function admin_init () {
+		if ( !is_plugin_active( 'glotpress/glotpress.php' ) ) :
+
+			$this->message[] = array(
+				'status'  => 'error',
+				'content' => esc_html__( 'GlotPress plugin needs to be installed and activated', 'gp-live-export' ),
+				'path'    => 'GP Live Export'
+			);
+			add_action( 'admin_notices', array( $this, 'admin_notice' ) );
+			remove_submenu_page( 'options-general.php', 'gp-live-export' );
+
+		else:
+
+			if ( isset( $_GET["page"]    )
+				&& isset( $_GET["project"] )
+				&& isset( $_GET["locale"]  )
+				&& $_GET["page"] == 'gp-live-export' ) :
+				$set = ( isset( $_GET["set"] ) ) ? $_GET["set"] : 'default';
+				$this->export( $_GET["project"], $_GET["locale"], $set );
+			endif;
+
+		endif;
+	}
+
+
   /**
    * Export translation file.
    */
-  function export() {
+  function export( $project, $locale, $set = 'default' ) {
 
-		if ( !is_plugin_active( 'glotpress/glotpress.php' ) ) {
+		$translation_set = $this->get_translation_set( $project, $locale, $set );
+		if ( is_wp_error( $translation_set ) ) {
+			$this->message[] = array(
+				'status'  => 'error',
+				'content' => $translation_set->get_error_message(),
+				'path'    => $project
+			);
+			add_action( 'admin_notices', array( $this, 'admin_notice' ) );
 			return;
 		}
+		$filters = array( 'status' => 'current_or_waiting_or_fuzzy_or_untranslated' );
+		$entries = GP::$translation->for_translation( $this->project, $translation_set, 'no-limit', $filters );
 
+		$types = array( 'po', 'mo' );
 
-			if ( isset( $_GET["page"] ) && $_GET["page"] == 'gp-live-export'
-			  && isset( $_GET["project"] ) && isset( $_GET["locale"] ) ) {
-				$project = $_GET["project"];
-				$locale  = $_GET["locale"];
-			}
-			else {
-				return;
-			}
+		foreach( $types as $type ) :
 
-			$translation_set = $this->get_translation_set( $project, $locale );
-			if ( is_wp_error( $translation_set ) ) {
+			$format = gp_array_get( GP::$formats, $type, null );
+
+			if ( ! $format ) :
 				$this->message[] = array(
 					'status'  => 'error',
-					'content' => $translation_set->get_error_message(),
+					'content' => __( 'No such format', 'glotpress' ),
 					'path'    => $project
 				);
 				add_action( 'admin_notices', array( $this, 'admin_notice' ) );
-				return;
-			}
-			$filters = array( 'status' => 'current_or_waiting_or_fuzzy_or_untranslated' );
-			$entries = GP::$translation->for_translation( $this->project, $translation_set, 'no-limit', $filters );
 
-			$types = array( 'po', 'mo' );
-			foreach( $types as $type ) {
+			else:
+				$print = $format->print_exported_file( $this->project, $this->locale, $translation_set, $entries );
+				$name  = $this->get_file_name( $project, $locale, $type );
+				$path  = path_join( WP_LANG_DIR, $name );
+				$save  = $this->file_save( $print, $path );
 
-				$format = gp_array_get( GP::$formats, $type, null );
-
-				if ( ! $format ) {
+				if( is_wp_error( $save ) ) :
+					echo $save->get_error_message();
 					$this->message[] = array(
 						'status'  => 'error',
-						'content' => __( 'No such format', 'glotpress' ),
-						'path'    => $project
+						'content' => $save->get_error_message(),
+						'path'    => $name
 					);
 					add_action( 'admin_notices', array( $this, 'admin_notice' ) );
-				}
-				else {
-					$print = $format->print_exported_file( $this->project, $this->locale, $translation_set, $entries );
-					$name  = $this->get_file_name( $project, $locale, $type );
-					$path  = path_join( WP_LANG_DIR, $name );
-					$save  = $this->file_save( $print, $path );
-					if( is_wp_error( $save ) ) {
-						echo $save->get_error_message();
-						$this->message[] = array(
-							'status'  => 'error',
-							'content' => $save->get_error_message(),
-							'path'    => $name
-						);
-						add_action( 'admin_notices', array( $this, 'admin_notice' ) );
-					}
-					else {
-						$this->message[] = array(
-							'status' => 'success',
-							'path'   => $path
-						);
-						$this->project_name = $project;
-						add_action( 'admin_notices', array( $this, 'admin_notice' ) );
-					}
 
-				}
-			}
+				else :
+					$this->message[] = array(
+						'status' => 'success',
+						'path'   => $path
+					);
+					$this->project_name = $project;
+					add_action( 'admin_notices', array( $this, 'admin_notice' ) );
+
+				endif;
+			endif;
+		endforeach;
   }
 
 	/**
@@ -203,7 +200,29 @@ class GPLE_Options_Page {
 
 			$projects = GP::$project->top_level();
 
-			if ( !empty( $projects ) ) :
+			if ( empty( $projects ) ) {
+
+				printf(
+					/* Translators: %s: GlotPress dashboard link */
+					esc_html__( 'Let\'s go to your %s and set up your first project!', 'gp-live-export' ),
+					sprintf (
+						'<a href="%1$s">%2$s</a>',
+						gp_url_public_root(),
+						esc_html__( 'GlotPress dashboard', 'gp-live-export' )
+						)
+				);
+				echo '<br>';
+				printf(
+					/* Translators: %s: page link */
+					esc_html__( 'For setting up WordPress core/theme/plugin translation, you can find more instruction on %s.', 'gp-live-export' ),
+					sprintf (
+						'<a href="%1$s">%2$s</a>',
+						esc_html__( 'https://wordpress.org', 'gp-live-export' ) . '/plugins/gp-live-export/#faq',
+						esc_html__( 'WordPress.org Plugin page', 'gp-live-export' )
+						)
+				);
+
+			} else {
 
 				echo '<table class="wp-list-table widefat"><thead><tr>';
 				echo '<th>'. esc_html__( 'Parent', 'gp-live-export' ) .'</th>';
@@ -240,7 +259,8 @@ class GPLE_Options_Page {
 				endforeach;
 
 				echo '</tbody></table>';
-			endif;
+			} // endif;
+
 			echo '</div>';
 	}
 
@@ -250,17 +270,18 @@ class GPLE_Options_Page {
 	function gp_link_export_project ( $project ) {
 		if ( $translation_sets = GP::$translation_set->by_project_id( $project->id ) ) :
 
+			$project_path = $project->path;
+
 			foreach ( $translation_sets as $translation_set ):
-				$locale    = $translation_set->locale;
-				$admin_url = sprintf (
-					'options-general.php?page=gp-live-export&locale=%1$s&project=%2$s',
-						$locale,
-						$project->path
-				);
+
+				$admin_url = 'options-general.php?page=gp-live-export';
+				$admin_url = ( $project = $project_path           ) ? $admin_url.'&project='.$project : $admin_url;
+				$admin_url = ( $locale = $translation_set->locale ) ? $admin_url.'&locale='.$locale   : $admin_url;
+				$admin_url = ( $set = $translation_set->slug      ) ? $admin_url.'&set='.$set         : $admin_url;
 
 				printf ( '<a href="%1$s" class="button">%2$s</a>',
 				esc_url ( admin_url ( $admin_url ) ),
-				$locale
+				$locale . ' ('.$set.')'
 			 );
 			endforeach;
 
